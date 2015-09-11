@@ -1,0 +1,80 @@
+{
+  "name": "terminal-logger",
+  "description": "It's a console logger.",
+  "version": "0.0.0",
+  "homepage": "https://github.com/snowyu/terminal-logger.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/snowyu/terminal-logger.js.git"
+  },
+  "main": "./index",
+  "files": [
+    "README.md",
+    "LICENSE-MIT",
+    "*.js",
+    "*.coffee",
+    "test",
+    "src",
+    "img",
+    "lib"
+  ],
+  "keywords": [
+    "logger",
+    "logging",
+    "log",
+    "loglevel",
+    "terminal",
+    "console"
+  ],
+  "dependencies": {
+    "abstract-logger": "^0.1.0",
+    "cli-table": "^0.3.1",
+    "colors": "^1.1.2",
+    "inherits-ex": "^1.1.4",
+    "util-ex": "^0.3.14"
+  },
+  "devDependencies": {
+    "chai": "~3.2.0",
+    "coffee-coverage": "^0.6.3",
+    "grunt": "~0.4.5",
+    "grunt-contrib-clean": "~0.6.0",
+    "grunt-contrib-coffee": "~0.12.0",
+    "grunt-contrib-copy": "~0.7.0",
+    "grunt-contrib-watch": "~0.6.1",
+    "grunt-mocha-test": "~0.12.6",
+    "grunt-newer": "~0.8.0",
+    "grunt-release": "~0.9.0",
+    "istanbul": "^0.3.18",
+    "mocha": "~2.1.0",
+    "pre-commit": "~1.1.1",
+    "rimraf": "~2.2.8",
+    "shasum": "1.0.0",
+    "sinon": "~1.16.1",
+    "sinon-chai": "~2.8.0"
+  },
+  "scripts": {
+    "test": "grunt test",
+    "test-cov": "mocha --reporter dot && istanbul report text-summary lcovonly"
+  },
+  "contributors": [
+    {
+      "name": "Riceball LEE",
+      "email": "snowyu.lee@gmail.com",
+      "url": "https://github.com/snowyu"
+    }
+  ],
+  "maintainers": [
+    {
+      "name": "Riceball LEE",
+      "email": "snowyu.lee@gmail.com"
+    }
+  ],
+  "pre-commit": [
+    "test"
+  ],
+  "bugs": {
+    "url": "https://github.com/snowyu/terminal-logger.js/issues"
+  },
+  "license": "MIT",
+  "stability": "unstable"
+}
