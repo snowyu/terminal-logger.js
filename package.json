@@ -1,7 +1,7 @@
 {
   "name": "terminal-logger",
-  "description": "It's a console logger.",
-  "version": "0.1.0",
+  "description": "It's a console logger inherited from abstract-logger.",
+  "version": "0.2.0",
   "homepage": "https://github.com/snowyu/terminal-logger.js",
   "repository": {
     "type": "git",
