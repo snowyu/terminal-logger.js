@@ -18,7 +18,21 @@ module.exports = test = (TerminalLogger)->
 
   describe TerminalLogger.name, ->
     log = TerminalLogger('test')
-    beforeEach -> TerminalLogger::_write.reset()
+    beforeEach ->
+      writeFn.reset()
+      log.level = 'ERROR'
+
+    it 'should customize the colors and statusLevels', ->
+      expectedColors = {}
+      expectedStatusLevels = {}
+      result = TerminalLogger
+        name: 'test'
+        colors: expectedColors
+        statusLevels: expectedStatusLevels
+      expect(result).to.be.instanceof TerminalLogger
+      expect(result.colors).to.be.equal expectedColors
+      expect(result.statusLevels).to.be.equal expectedStatusLevels
+      expect(result.name).to.be.equal 'test'
 
     describe '#tick', ->
       it 'should tick a msg', ->
@@ -49,12 +63,44 @@ module.exports = test = (TerminalLogger)->
         expected -= log.step.length
         expect(log.padding).to.have.length expected
 
-    getKeys(TerminalLogger::statusColors).forEach (status)->
-      describe '#'+status, ->
-        it 'should write msg with status', ->
-          log[status] 'hiMsg'
-          expect(writeFn).to.be.calledOnce
-          expect(writeFn.firstCall.args[0]).to.be.include 'hiMsg'
-          expect(writeFn.firstCall.args[0]).to.be.include status
+    describe '#status', ->
+      it 'should write msg', ->
+        log.level = 'trace'
+        getKeys(log.colors).forEach (status, i)->
+          if status != 'name'
+            writeFn.reset()
+            log.status status, 'hiMsg'
+            expect(writeFn).to.have.callCount 1
+            expect(writeFn.firstCall.args[0]).to.be.include 'hiMsg'
+            expect(writeFn.firstCall.args[0]).to.be.include status
+      it 'should mute msg with status', ->
+        log.level = 'silent'
+        getKeys(log.colors).forEach (status, i)->
+          if status != 'name'
+            writeFn.reset()
+            log.status status, 'hiMsg'
+            expect(writeFn).to.have.callCount 0
+
+      getKeys(log.colors).forEach (status, i)->
+        if status != 'name'
+          describe '#status.'+status, ->
+            it 'should write msg with '+status, ->
+              log.level = 'trace'
+              log.status[status] 'hiMsg'
+              expect(writeFn).to.have.callCount 1
+              expect(writeFn.firstCall.args[0]).to.be.include 'hiMsg'
+              expect(writeFn.firstCall.args[0]).to.be.include status
+
+    describe '#log', ->
+      it 'should log with level', ->
+        log.log 'hiMsg',
+          status: 'create'
+        expect(writeFn).to.have.callCount 0
+        log.level = 'INFO'
+        log.log '${status}: hiMsg',
+          status: 'create'
+        expect(writeFn).to.have.callCount 2
+        expect(writeFn.firstCall.args[0]).to.be.include 'hiMsg'
+        expect(writeFn.firstCall.args[0]).to.be.include 'create'
 
 test()

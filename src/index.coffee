@@ -1,17 +1,23 @@
-inherits      = require 'inherits-ex/lib/inherits'
-createObject  = require 'inherits-ex/lib/createObjectWith'
-format        = require 'util-ex/lib/format'
-isArray       = require 'util-ex/lib/is/type/array'
-Table         = require 'cli-table'
-colors        = require 'colors/safe'
-Logger        = require 'abstract-logger'
-getKeys       = Object.keys
+inherits        = require 'inherits-ex/lib/inherits'
+createObject    = require 'inherits-ex/lib/createObjectWith'
+getPrototypeOf  = require 'inherits-ex/lib/getPrototypeOf'
+format          = require 'util-ex/lib/format'
+isArray         = require 'util-ex/lib/is/type/array'
+isObject        = require 'util-ex/lib/is/type/object'
+isString        = require 'util-ex/lib/is/type/string'
+defineProperty  = require 'util-ex/lib/defineProperty'
+Table           = require 'cli-table'
+colors          = require 'colors/safe'
+Logger          = require 'abstract-logger'
+getKeys         = Object.keys
 
-
-pad = (status) ->
-  max = 'identical'.length
-  delta = max - status.length
-  (if delta then new Array(delta + 1).join(' ') + status else status)
+textColor = (aColors, aText)->
+  if isString aColors
+    aColors = [aColors]
+  if isArray aColors
+    aColors.forEach (color)->
+      aText = colors[color] aText
+  aText
 
 # `Logger` is a [logref](https://github.com/mikeal/logref)
 # compatible logger, with an enhanced API.
@@ -22,10 +28,23 @@ pad = (status) ->
 module.exports = class TerminalLogger
   inherits TerminalLogger, Logger
 
-  constructor: ->
+  constructor: (aName, aOptions)->
     return createObject TerminalLogger, arguments unless @ instanceof TerminalLogger
     super
+    aOptions = aName if isObject aName
+    if isObject aOptions
+      @colors = aOptions.colors if aOptions.colors
+      @statusLevels = aOptions.statusLevels if aOptions.statusLevels
+    @colors ?= stColors
 
+  # padding step
+  step: '  '
+  padding: ' '
+
+  pad = (status, max) ->
+    max ?= 'identical'.length
+    delta = max - status.length
+    (if delta then new Array(delta + 1).join(' ') + status else status)
 
   noBorderTable: noBorderTable =
     'top': ''
@@ -48,23 +67,129 @@ module.exports = class TerminalLogger
     'padding-right': 0
 
   # color -> status mappings
-  statusColors: stColors =
-    skip: 'magenta' # warning
-    force: 'yellow' # warning
+  stColors =
+    skip: 'magenta'
+    force: 'yellow'
     create: 'green'
     invoke: 'bold'
-    conflict: 'red'   # error/warning
-    identical: 'cyan' # error/warning
-    error: 'red'
+    conflict: 'red'
+    identical: 'cyan'
     ok: 'green'
-    debug: 'blue'
+    emergency: ['red', 'bold']
+    alert: 'red'
+    critical: 'red'
+    error: 'red'
     warning: 'yellow'
-    info: 'gray'      # info
+    notice: 'gray'
+    info: 'gray'
+    debug: 'blue'
+    trace: 'blue'
+    '✔': 'green'
+    '✗': 'red'
+    name: 'blue'
 
-  # padding step
-  step: '  '
-  padding: ' '
+  # status -> level mappings
+  statusLevels: stLevels =
+    skip: 'warning'
+    force: 'warning'
+    create: 'notice'
+    invoke: 'notice'
+    conflict: 'error'
+    identical: 'error'
+    ok: 'notice'
+    '✔': 'notice'
+    '✗': 'error'
 
+  _colorProp: (aObject, aName, aDefaultValue)->
+    s = aObject[aName]
+    aObject[aName] = textColor(@colors[s]||@colors[aName]||aDefaultValue, s) if s?
+    return
+
+  formatter: (aContext, args...) ->
+    @_colorProp(aContext, 'status')
+    @_colorProp(aContext, 'level')
+    aContext.name = @name if !aContext.name? and @name?
+    @_colorProp(aContext, 'name', 'blue')
+    super
+
+  inLevelContext: (aContext)->
+    vStatus = aContext.status
+    if vStatus? and !aContext.level?
+      vLevel = @statusLevels[vStatus]
+      vLevel ?= vStatus
+      aContext.level = vLevel if @levelStr2Id(vLevel)?
+    result = super aContext
+    result
+
+  defineProperty @::, '_colors'
+  defineProperty @::, '_maxStatus' # the max length status in colors
+  defineProperty @::, 'status'
+  defineProperty @::, 'colors', undefined,
+    get: -> @_colors
+    set: (value)-> @updateColors(value)
+
+  # return the max len of status in the aColors if successful.
+  getMaxLenInColors: (aColors)->
+    aColors ?= @_colors
+    result = 0
+    getKeys(aColors).forEach (status) ->
+      result = status.length if status.length > result
+    result
+
+  _clearStatus: (aColors)->
+    aColors ?= @_colors
+    @status = (aStatus, args...)->
+      vLevel = @statusLevels[aStatus.toLowerCase()]
+      vLevel ?= aStatus
+      vLevel = @levelStr2Id(vLevel)
+      if !vLevel? or @inLevel vLevel
+        vColor = aColors[aStatus] if aColors
+        vStr = format.apply(null, args)
+        vLN = @NEWLINE
+        padding = @padding
+        if vLN
+          vStr = vStr.split(vLN).map (s)->
+            result = if s then padding + s else s
+          .join(vLN)
+        vStr = @table
+          chars: noBorderTable,
+          style: noPaddingTable,
+          colAligns:['right', 'left']
+          rows: [[textColor(vColor, pad(aStatus, @_maxStatus)), vStr]]
+        vStr += @NEWLINE
+        @write vStr
+      return this
+    # End @status
+    @
+
+  updateColors: (aColors)->
+    if isObject(aColors)
+      @_colors = aColors
+      @_maxStatus = @getMaxLenInColors(aColors)
+
+      @_clearStatus(aColors)
+      that = @
+      # maybe I should deprecate these:
+      # Only reserve the status() method.
+      getKeys(aColors).forEach (status)->
+        # Each predefined status has its logging method utility, handling
+        # status color and padding before the usual `.write()`
+        #
+        # Example
+        #
+        #    log
+        #      .write()
+        #      .status.info('Doing something')
+        #      .status.force('Forcing filepath %s, 'some path')
+        #      .status.conflict('on %s' 'model.js')
+        #      .write()
+        #      .ok('This is ok');
+        # Returns the logger
+        if status isnt 'name'
+          that.status[status] = (args...)->
+            args.unshift status
+            that.status.apply that, args
+    @
 
   # Write a string to stderr.
   #
@@ -75,14 +200,20 @@ module.exports = class TerminalLogger
 
   # Convenience helper to write sucess status, this simply prepends the
   # message with a green `✔`.
-  tick: (msg) ->
-    @write colors.green('✔ ') + format.apply(null, arguments) + @NEWLINE
+  tick: ->
+    vText = '✔'
+    vColor = @colors[vText] if @colors
+    vColor ?= 'green'
+    @write @padding + textColor(vColor, vText+' ') + format.apply(null, arguments) + @NEWLINE
     this
 
   # Convenience helper to write error status, this simply prepends the
   # message with a red `✗`.
-  cross: (msg) ->
-    @write colors.red('✗ ') + format.apply(null, arguments) + @NEWLINE
+  cross: ->
+    vText = '✗'
+    vColor = @colors[vText] if @colors
+    vColor ?= 'red'
+    @write @padding + textColor(vColor, vText+' ') + format.apply(null, arguments) + @NEWLINE
     this
 
   up: ->
@@ -92,57 +223,6 @@ module.exports = class TerminalLogger
   down: ->
     @padding = @padding.replace(@step, '')
     this
-
-  getKeys(stColors).forEach (status) ->
-
-    # Each predefined status has its logging method utility, handling
-    # status color and padding before the usual `.write()`
-    #
-    # Example
-    #
-    #    log
-    #      .write()
-    #      .info('Doing something')
-    #      .force('Forcing filepath %s, 'some path')
-    #      .conflict('on %s' 'model.js')
-    #      .write()
-    #      .ok('This is ok');
-    #
-    # The list of status and mapping stColors
-    #
-    #    skip       yellow
-    #    force      yellow
-    #    create     green
-    #    invoke     bold
-    #    conflict   red
-    #    identical  cyan
-    #    error      red
-    #    ok         green
-    #    debug      blue
-    #    warning    yellow
-    #    info       grey
-    #
-    # Returns the logger
-    TerminalLogger::[status] = ->
-      vColor = stColors[status]
-      vStr = format.apply(null, arguments)
-      vLN = @NEWLINE
-      padding = @padding
-      if vLN
-        vStr = vStr.split(vLN).map (s)->
-          result = if s then padding + s else s
-        .join(vLN)
-      #vTable = new Table
-      vStr = @table
-        chars: noBorderTable,
-        style: noPaddingTable,
-        colAligns:['right', 'left']
-        rows: [[colors[vColor](pad status), vStr]]
-      #vTable.push [colors[vColor](pad status), vStr]
-      #vStr = vTable.toString()
-      vStr += @NEWLINE
-      @write vStr
-      this
 
   # A basic wrapper around `cli-table` package, resetting any single
   # char to empty strings, this is used for aligning options and
