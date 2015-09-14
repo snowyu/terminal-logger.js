@@ -139,7 +139,8 @@ module.exports = class TerminalLogger
   _clearStatus: (aColors)->
     aColors ?= @_colors
     @status = (aStatus, args...)->
-      vLevel = @statusLevels[aStatus.toLowerCase()]
+      aStatus = aStatus.toLowerCase()
+      vLevel = @statusLevels[aStatus]
       vLevel ?= aStatus
       vLevel = @levelStr2Id(vLevel)
       if !vLevel? or @inLevel vLevel

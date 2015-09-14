@@ -64,6 +64,12 @@ module.exports = test = (TerminalLogger)->
         expect(log.padding).to.have.length expected
 
     describe '#status', ->
+      it 'should be case-insenstive of status', ->
+        log.status 'ERROR', 'hiMsg'
+        expect(writeFn).to.have.callCount 1
+        expect(writeFn.firstCall.args[0]).to.be.include 'hiMsg'
+        expect(writeFn.firstCall.args[0]).to.be.include 'error'
+
       it 'should write msg', ->
         log.level = 'trace'
         getKeys(log.colors).forEach (status, i)->
