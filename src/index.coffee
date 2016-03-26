@@ -244,3 +244,12 @@ module.exports = class TerminalLogger
       vRows.forEach (row)->result.push row
     result.toString()
 
+  (->
+    for k, id of Logger::levels
+      continue if id < 0
+      k = k.toLowerCase()
+      TerminalLogger::[k] = ((k)->
+        return ->
+          @status[k].apply @, arguments
+      )(k)
+  )()

@@ -109,4 +109,18 @@ module.exports = test = (TerminalLogger)->
         expect(writeFn.firstCall.args[0]).to.be.include 'hiMsg'
         expect(writeFn.firstCall.args[0]).to.be.include 'create'
 
+
+    for k, v of log.levels
+      continue if v < 0
+      k = k.toLowerCase()
+      ( (k,v)->
+        describe '#' + k, ->
+          it 'should log with level', ->
+            log.level = v
+            log[k] '${status}: hiMsg'
+            expect(writeFn).to.have.callCount 1
+            expect(writeFn.firstCall.args[0]).to.be.include 'hiMsg'
+            expect(writeFn.firstCall.args[0]).to.be.include k
+      )(k,v)
+
 test()
