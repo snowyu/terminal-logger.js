@@ -19,7 +19,7 @@ value and redirection, should you need to generate output this way.
 ## Usage
 
 ```js
-logger  = require('./')('test')
+logger  = require('terminal-logger')('test')
 //change the logging level.
 logger.level = 'info'
 
@@ -74,6 +74,8 @@ the result:
 
 ### v0.2.0
 
++ add the `emergency/alert/critical/error/warning/notice/info/debug/trace(message[, context], args...)` methods:
+  * these are same as `logger.status[xxx]`. (v0.2.3)
 + add the logging level supports
 - **broken**: remove the predefined status as its logging method utility
 + add `status(aStatus, aMessage, ...)` and `status[status](aMessage,...)` methods
