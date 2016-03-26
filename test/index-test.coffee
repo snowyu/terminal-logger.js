@@ -117,9 +117,9 @@ module.exports = test = (TerminalLogger)->
         describe '#' + k, ->
           it 'should log with level', ->
             log.level = v
-            log[k] '${status}: hiMsg'
+            log[k] 'hiMsg', 'ok'
             expect(writeFn).to.have.callCount 1
-            expect(writeFn.firstCall.args[0]).to.be.include 'hiMsg'
+            expect(writeFn.firstCall.args[0]).to.be.include 'hiMsg ok'
             expect(writeFn.firstCall.args[0]).to.be.include k
       )(k,v)
 
